@@ -9,6 +9,7 @@ import java.sql.Statement;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import model.Persona;
 
@@ -38,11 +39,11 @@ public class DAOPersonas {
 	 * @return
 	 * @throws SQLException
 	 */
-	public Connection getConexion() throws SQLException {
+	public static Connection getConexion() throws SQLException {
 		return DriverManager.getConnection(String.format("jdbc:mariadb://localhost:3306/%s?user=%s&password=%s", baseDeDatos, usuario, contrasena));
 	}
 	
-	public List<Persona> getPersonas() {
+	public static List<Persona> getPersonas() {
 		List<Persona> personas = new LinkedList<>();
 		try (Connection con = getConexion()) {
 			Statement st = con.createStatement();
@@ -52,7 +53,7 @@ public class DAOPersonas {
 					String nombre = res.getString(COLUMNAS.NOMBRE.getNombre());
 					String apellidos = res.getString(COLUMNAS.APELLIDOS.getNombre());
 					int edad = res.getInt(COLUMNAS.EDAD.getNombre());
-					personas.add(new Persona(nombre, apellidos, edad));
+					personas.add(new Persona(nombre, apellidos, edad).setId(res.getInt(COLUMNAS.ID.getNombre())));
 				} catch (SQLException e) {
 					e.printStackTrace();
 				}
@@ -63,16 +64,16 @@ public class DAOPersonas {
 		return personas;
 	}
 	
-	public void anadirPersona(Persona... persona) throws SQLException {
+	public static void anadirPersona(Persona... persona) throws SQLException {
 		if (persona != null) {			
-			String sql = "INSERT INTO Persona ('nombre', 'apellidos', 'edad') values (?, ?, ?)";
+			String sql = "INSERT INTO Persona (nombre, apellidos, edad) values (?, ?, ?)";
 			try (Connection con = getConexion()) {
 				PreparedStatement ps = con.prepareStatement(sql);
 				Arrays.stream(persona).forEach(per -> {
 					try {
-						ps.setString(0, per.getNombre());
-						ps.setString(1, per.getApellidos());
-						ps.setInt(2, per.getEdad());
+						ps.setString(1, per.getNombre());
+						ps.setString(2, per.getApellidos());
+						ps.setInt(3, per.getEdad());
 						ps.addBatch();
 					} catch (SQLException e) {
 						e.printStackTrace();
@@ -83,30 +84,30 @@ public class DAOPersonas {
 		}
 	}
 	
-	public int eliminarPersona(Persona persona) throws SQLException {
+	public static int eliminarPersona(Persona persona) throws SQLException {
 		if (persona != null) {
 			String sql = "DELETE FROM Persona WHERE nombre = ? and apellidos = ? and edad = ?";
 			try (Connection con = getConexion()) {
 				PreparedStatement ps = con.prepareStatement(sql);
-				ps.setString(0, persona.getNombre());
-				ps.setString(1, persona.getApellidos());
-				ps.setInt(2, persona.getEdad());
+				ps.setString(1, persona.getNombre());
+				ps.setString(2, persona.getApellidos());
+				ps.setInt(3, persona.getEdad());
 				return ps.executeUpdate();
 			}
 		}
 		return 0;
 	}
 	
-	public Persona updatePersona(Persona persona, String nombre, String apellidos, int edad) throws SQLException {
+	public static Persona updatePersona(Persona persona, String nombre, String apellidos, int edad) throws SQLException {
 		String sql = "UPDATE Persona "
-				+ String.format("SET nombre = %s, apellidos = %s, edad = %d", nombre, apellidos, edad)
+				+ String.format("SET nombre = %s, apellidos = %s, edad = %d ", nombre, apellidos, edad)
 				+ "where nombre = ? and apellidos = ? and edad = ?";
 		
 		try (Connection con = getConexion()) {
 			PreparedStatement ps = con.prepareStatement(sql);
-			ps.setString(0, persona.getNombre());
-			ps.setString(1, persona.getApellidos());
-			ps.setInt(2, persona.getEdad());
+			ps.setString(1, persona.getNombre());
+			ps.setString(2, persona.getApellidos());
+			ps.setInt(3, persona.getEdad());
 			int afectadas = ps.executeUpdate();
 			if (afectadas == 1) {
 				persona
@@ -118,13 +119,27 @@ public class DAOPersonas {
 		return persona;
 	}
 	
+	public static boolean existe(Persona persona) {
+		AtomicBoolean existe = new AtomicBoolean(false);
+		try (Connection con = getConexion()) {
+			PreparedStatement st = con.prepareStatement("SELECT * FROM Persona WHERE nombre = ? AND apellidos = ? AND edad = ?");
+			st.setString(1, persona.getNombre());
+			st.setString(2, persona.getApellidos());
+			st.setInt(3, persona.getEdad());
+			iterarResultSet(st.executeQuery(), res -> existe.set(true));
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return existe.get();
+	}
+	
 	
 	//PARA HACER MENOS ENGORROSO ITERAR EL RESULTSET
 	@FunctionalInterface
-	private interface RSCallback {
+	private static interface RSCallback {
 		public void hacerCosa(ResultSet rs);
 	}
-	private void iterarResultSet(ResultSet rs, RSCallback callback) throws SQLException {
+	private static void iterarResultSet(ResultSet rs, RSCallback callback) throws SQLException {
 		while (rs.next()) {
 			callback.hacerCosa(rs);
 		}

@@ -4,7 +4,7 @@ import java.util.Objects;
 
 public class Persona {
 	private String nombre, apellidos;
-	private int edad;
+	private int edad, id;
 	public Persona(String nombre, String apellidos, int edad) {
 		super();
 		this.nombre = nombre;
@@ -30,6 +30,13 @@ public class Persona {
 	}
 	public Persona setEdad(int edad) {
 		this.edad = edad;
+		return this;
+	}
+	public int getId() {
+		return id;
+	}
+	public Persona setId(int id) {
+		this.id = id;
 		return this;
 	}
 	@Override

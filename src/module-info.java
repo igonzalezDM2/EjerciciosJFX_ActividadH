@@ -1,4 +1,5 @@
 module ActividadB {
+	requires waffle.jna;
 	requires java.sql;
 	requires javafx.controls;
 	requires java.desktop;

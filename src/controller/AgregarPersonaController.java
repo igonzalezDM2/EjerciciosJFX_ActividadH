@@ -1,15 +1,20 @@
 package controller;
 
-import javafx.collections.ObservableList;
+import static dao.DAOPersonas.anadirPersona;
+import static dao.DAOPersonas.existe;
+import static dao.DAOPersonas.updatePersona;
+
+import java.sql.SQLException;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
-import javafx.scene.control.Alert.AlertType;
 import javafx.stage.Stage;
 import model.Persona;
 
@@ -68,20 +73,27 @@ public class AgregarPersonaController {
     }
     
     private boolean insertarPersona(Persona persona) {
-    	ObservableList<Persona> personas = tabla.getItems();
     	Persona p1 = getPersona();
     	if (p1 != null) {
-    		p1.setNombre(persona.getNombre()); 
-    		p1.setApellidos(persona.getApellidos()); 
-    		p1.setEdad(persona.getEdad());
-    		tabla.refresh();
-    		return true;
-    	} else if (!personas.contains(persona)) {
-    		tabla.getItems().add(persona);
-    		tabla.refresh();
-//    		Alert alert = new Alert(AlertType.INFORMATION, "Persona añadida correctamente", ButtonType.OK);
-//    		alert.showAndWait();
-    		return true;
+    		try {
+    			//Si sale bien, modifica p1 (la persona seleccionada en la tabla)
+				updatePersona(p1, persona.getNombre(), persona.getApellidos(), persona.getEdad());
+				tabla.refresh();
+				return true;
+			} catch (SQLException e) {
+	    		Alert alert = new Alert(AlertType.ERROR, "No se pudo modificar la persona en la base de datos", ButtonType.OK);
+	    		alert.showAndWait();
+			}
+    	} else if (!existe(persona)) {    		
+    		try {
+				anadirPersona(persona);
+				tabla.getItems().add(persona);
+				tabla.refresh();
+				return true;
+			} catch (SQLException e) {
+	    		Alert alert = new Alert(AlertType.ERROR, "No se pudo añadir la persona a la base de datos", ButtonType.OK);
+	    		alert.showAndWait();
+			}
     	} else {
     		Alert alert = new Alert(AlertType.WARNING, "La persona está repetida", ButtonType.OK);
     		alert.showAndWait();

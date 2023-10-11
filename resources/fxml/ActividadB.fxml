@@ -39,8 +39,8 @@
                   <Button fx:id="btnAgregarPersona" mnemonicParsing="false" onAction="#agregarPersona" text="Agregar Persona" />
                   <Button fx:id="btnModificarPersona" mnemonicParsing="false" onAction="#modifcarPersona" text="Modifcar Persona" />
                   <Button fx:id="btnEliminarPersona" mnemonicParsing="false" onAction="#eliminarPersona" text="Eliminar Persona" />
-                  <Button fx:id="btnImportar" mnemonicParsing="false" onAction="#importar" text="Importar" />
-                  <Button fx:id="btnExportar" mnemonicParsing="false" onAction="#exportar" text="Exportar" />
+                  <!-- <Button fx:id="btnImportar" mnemonicParsing="false" onAction="#importar" text="Importar" />
+                  <Button fx:id="btnExportar" mnemonicParsing="false" onAction="#exportar" text="Exportar" /> -->
                </children>
                <GridPane.margin>
                   <Insets top="70.0" />

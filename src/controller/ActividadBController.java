@@ -6,11 +6,13 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URL;
+import java.sql.SQLException;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.ResourceBundle;
 import java.util.Set;
 
+import dao.DAOPersonas;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -35,8 +37,6 @@ import javafx.stage.Stage;
 import model.Persona;
 
 public class ActividadBController implements Initializable {
-	
-	Set<Persona> personas;
 
     @FXML
     private Button btnAgregarPersona;
@@ -80,11 +80,10 @@ public class ActividadBController implements Initializable {
 
     @FXML
     void buscar(KeyEvent event) {
-    	inicializarListaDePersonas();
     	
     	String texto = tfBusqueda.getText().toLowerCase();
     	if (texto != null && !texto.isBlank()) {    		
-    		List<Persona> listaFiltrada = personas.stream().filter(pers -> pers.getNombre().toLowerCase().contains(texto)).toList();
+    		List<Persona> listaFiltrada = DAOPersonas.getPersonas().stream().filter(pers -> pers.getNombre().toLowerCase().contains(texto)).toList();
     		tablaPersonas.setItems(FXCollections.observableArrayList(listaFiltrada));
     		tablaPersonas.refresh();
     	} else {
@@ -125,12 +124,18 @@ public class ActividadBController implements Initializable {
     @FXML
     void eliminarPersona(ActionEvent event) {
     	Persona persona = tablaPersonas.getSelectionModel().getSelectedItem();
-    	
-    	if (persona != null) {  
-    		tablaPersonas.getItems().remove(persona);
-    		tablaPersonas.refresh();
-    		Alert alert = new Alert(AlertType.INFORMATION, "La persona \"" + persona.getNombre() + "\" fue eliminada", ButtonType.OK);
-    		alert.showAndWait();
+    	if (persona != null) {
+    		try {
+				if (DAOPersonas.eliminarPersona(persona) > 0) {					
+					tablaPersonas.getItems().remove(persona);
+					tablaPersonas.refresh();
+					Alert alert = new Alert(AlertType.INFORMATION, "La persona \"" + persona.getNombre() + "\" fue eliminada", ButtonType.OK);
+					alert.showAndWait();
+				}
+			} catch (SQLException e) {
+	    		Alert alert = new Alert(AlertType.ERROR, "No se pudo eliminar la persona de la base de datos", ButtonType.OK);
+	    		alert.showAndWait();
+			}
     	}
     }
 
@@ -185,10 +190,14 @@ public class ActividadBController implements Initializable {
 			
 		});
 		
-	
+		cargarPersonasDeBD();
+		
+		
 	}
 	
-    @FXML
+
+
+	@FXML
     void exportar(ActionEvent event) {
     	StringBuilder sb = new StringBuilder("Nombre,Apellidos,Edad\n");
     	Iterable<Persona> iterable = tablaPersonas.getItems();
@@ -230,44 +239,45 @@ public class ActividadBController implements Initializable {
         
         
         try (BufferedReader br = new BufferedReader(new FileReader(archivo))) {
-        	inicializarListaDePersonas();
         	//NOS SALTAMOS LA PRIMERA LÍNEA PUESTO QUE ES LA CABECERA
         	String linea = br.readLine();
+        	Set<Persona> importadas = new LinkedHashSet<>();
         	while ((linea = br.readLine()) != null) {
         		String[] valores = linea.split(",");
         		if (valores.length == 3) {
-        			personas.add(new Persona(valores[0], valores[1], Integer.parseInt(valores[2])));
+        			importadas.add(new Persona(valores[0], valores[1], Integer.parseInt(valores[2])));
         		} else {
         			throw new IOException("FORMATO INCORRECTO");        			
         		}
         	}
+        	DAOPersonas.anadirPersona(importadas.toArray(Persona[]::new));
         	//AL RECORRER TODAS LAS TUPLAS -> REDIBUJAR LA LISTA CON TODOS LOS VALORES Y RESETEAR LA BÚSQUEDA
         	mostrarTodasLasPersonas();
         } catch (IOException | NumberFormatException e) {
 			e.printStackTrace();
     		Alert alert = new Alert(AlertType.ERROR, "Hubo un problema al abrir el fichero", ButtonType.OK);
     		alert.showAndWait();
+		} catch (SQLException e) {
+    		Alert alert = new Alert(AlertType.ERROR, "No se pudieron añadir las personas importadas a la base de datos", ButtonType.OK);
+    		alert.showAndWait();
 		}
         
     	
     }
     
+    private void cargarPersonasDeBD() {
+    	tablaPersonas.getItems().addAll(DAOPersonas.getPersonas());
+    }
+    
     private void mostrarTodasLasPersonas() {
     	tfBusqueda.setText("");
-    	tablaPersonas.setItems(FXCollections.observableArrayList(personas));
+    	tablaPersonas.setItems(FXCollections.observableArrayList(DAOPersonas.getPersonas()));
     	tablaPersonas.refresh();
     }
 	
 	@FunctionalInterface
 	static interface Callback {
 		void run(GridPane panel, AgregarPersonaController controller);
-	}
-
-	private void inicializarListaDePersonas() {
-		if (personas == null) {
-			personas = new LinkedHashSet<Persona>();
-		}
-		personas.addAll(tablaPersonas.getItems());
 	}
 	
 	private void sacarDialogo(Callback callback) {
