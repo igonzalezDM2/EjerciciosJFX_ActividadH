@@ -100,7 +100,7 @@ public class DAOPersonas {
 	
 	public static Persona updatePersona(Persona persona, String nombre, String apellidos, int edad) throws SQLException {
 		String sql = "UPDATE Persona "
-				+ String.format("SET nombre = %s, apellidos = %s, edad = %d ", nombre, apellidos, edad)
+				+ String.format("SET nombre = \"%s\", apellidos = \"%s\", edad = %d ", nombre, apellidos, edad)
 				+ "where nombre = ? and apellidos = ? and edad = ?";
 		
 		try (Connection con = getConexion()) {
